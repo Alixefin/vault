@@ -1,0 +1,202 @@
+.page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+    min-height: 100vh;
+    animation: fadeIn 0.4s ease;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-2xl);
+}
+
+.adminLabel {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-sm);
+}
+
+.title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+.homeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.homeBtn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Search */
+.searchWrap {
+    position: relative;
+    margin-bottom: var(--space-xl);
+}
+
+.searchIcon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 40px;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-full);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all var(--transition-base);
+}
+
+.searchInput:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+}
+
+.searchInput::placeholder {
+    color: var(--text-muted);
+}
+
+/* Folder Grid */
+.folderGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.folderCard {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    animation: slideUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+.folderCard:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border-active);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+.folderIcon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+
+.folderMeta {
+    flex: 1;
+    min-width: 0;
+}
+
+.folderName {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.folderStats {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.arrow {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform var(--transition-fast);
+}
+
+.folderCard:hover .arrow {
+    transform: translateX(3px);
+    color: var(--text-primary);
+}
+
+/* Loading / Empty */
+.loadingGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.skeleton {
+    height: 64px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.empty {
+    text-align: center;
+    padding: var(--space-3xl);
+    color: var(--text-muted);
+}
+
+.empty h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: var(--space-md);
+    color: var(--text-secondary);
+}
+
+.empty p {
+    font-size: 0.85rem;
+    margin-top: var(--space-xs);
+}
+
+@media (max-width: 480px) {
+    .page {
+        padding: var(--space-md);
+    }
+}
