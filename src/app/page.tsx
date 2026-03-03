@@ -8,15 +8,30 @@ import styles from "./page.module.css";
 
 export default function HomePage() {
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [showConflict, setShowConflict] = useState(false);
   const [existingFolders, setExistingFolders] = useState<any[]>([]);
+  const [mode, setMode] = useState<"create" | "access">("create");
+
+  // Access mode state
+  const [accessName, setAccessName] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
+  const [accessFolders, setAccessFolders] = useState<any[]>([]);
+  const [accessError, setAccessError] = useState("");
+  const [accessStep, setAccessStep] = useState<"search" | "password">("search");
+  const [selectedFolder, setSelectedFolder] = useState<any>(null);
 
   const router = useRouter();
   const createFolder = useMutation(api.folders.create);
+  const verifyFolderPassword = useMutation(api.folders.verifyFolderPassword);
   const checkName = useQuery(
     api.folders.checkName,
     name.trim().length > 0 ? { name: name.trim() } : "skip"
+  );
+  const searchFolders = useQuery(
+    api.folders.searchByName,
+    accessName.trim().length > 0 ? { name: accessName.trim() } : "skip"
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +48,10 @@ export default function HomePage() {
         return;
       }
 
-      const folderId = await createFolder({ name: name.trim() });
+      const folderId = await createFolder({
+        name: name.trim(),
+        password: password.trim() || undefined,
+      });
       router.push(`/upload/${folderId}`);
     } catch (error) {
       console.error("Error:", error);
@@ -47,10 +65,65 @@ export default function HomePage() {
 
   const handleCreateNew = async () => {
     try {
-      const folderId = await createFolder({ name: name.trim() });
+      const folderId = await createFolder({
+        name: name.trim(),
+        password: password.trim() || undefined,
+      });
       router.push(`/upload/${folderId}`);
     } catch (error) {
       console.error("Error:", error);
+    }
+  };
+
+  const handleSearchFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessName.trim()) return;
+    setAccessError("");
+
+    if (searchFolders && searchFolders.length > 0) {
+      if (searchFolders.length === 1) {
+        const folder = searchFolders[0];
+        if (folder.hasPassword) {
+          setSelectedFolder(folder);
+          setAccessStep("password");
+        } else {
+          router.push(`/upload/${folder._id}`);
+        }
+      } else {
+        setAccessFolders(searchFolders);
+      }
+    } else {
+      setAccessError("No folder found with that name");
+    }
+  };
+
+  const handleAccessFolder = async (folder: any) => {
+    if (folder.hasPassword) {
+      setSelectedFolder(folder);
+      setAccessStep("password");
+      setAccessPassword("");
+    } else {
+      router.push(`/upload/${folder._id}`);
+    }
+  };
+
+  const handleVerifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFolder || !accessPassword.trim()) return;
+    setAccessError("");
+
+    try {
+      const valid = await verifyFolderPassword({
+        folderId: selectedFolder._id,
+        password: accessPassword.trim(),
+      });
+      if (valid) {
+        router.push(`/upload/${selectedFolder._id}`);
+      } else {
+        setAccessError("Incorrect password");
+      }
+    } catch {
+      setAccessError("Something went wrong");
     }
   };
 
@@ -72,43 +145,183 @@ export default function HomePage() {
 
         {/* Bottom card */}
         <div className={styles.bottomCard}>
-          <h2 className={styles.cardTitle}>
-            The easiest way to
-            <br />
-            store your media
-          </h2>
-          <p className={styles.cardSubtitle}>
-            Secure media vault to upload and organize your files
-          </p>
-
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <input
-              id="name-input"
-              type="text"
-              className={styles.nameInput}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name..."
-              autoComplete="off"
-              autoFocus
-            />
-
+          {/* Mode Toggle */}
+          <div className={styles.modeToggle}>
             <button
-              id="continue-btn"
-              type="submit"
-              className={styles.getStartedBtn}
-              disabled={!name.trim() || isChecking}
+              className={`${styles.modeBtn} ${mode === "create" ? styles.modeBtnActive : ""}`}
+              onClick={() => {
+                setMode("create");
+                setAccessError("");
+                setAccessStep("search");
+                setAccessFolders([]);
+              }}
             >
-              {isChecking ? (
-                <>
-                  <span className={styles.spinner} />
-                  Checking...
-                </>
-              ) : (
-                "Get Started"
-              )}
+              Create Folder
             </button>
-          </form>
+            <button
+              className={`${styles.modeBtn} ${mode === "access" ? styles.modeBtnActive : ""}`}
+              onClick={() => {
+                setMode("access");
+                setAccessError("");
+                setAccessStep("search");
+                setAccessFolders([]);
+              }}
+            >
+              Access Folder
+            </button>
+          </div>
+
+          {mode === "create" ? (
+            <>
+              <h2 className={styles.cardTitle}>
+                The easiest way to
+                <br />
+                store your media
+              </h2>
+              <p className={styles.cardSubtitle}>
+                Secure media vault to upload and organize your files
+              </p>
+
+              <form className={styles.form} onSubmit={handleSubmit}>
+                <input
+                  id="name-input"
+                  type="text"
+                  className={styles.nameInput}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter folder name..."
+                  autoComplete="off"
+                  autoFocus
+                />
+
+                <input
+                  id="password-input"
+                  type="password"
+                  className={styles.nameInput}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Set password (optional)"
+                  autoComplete="off"
+                />
+
+                <button
+                  id="continue-btn"
+                  type="submit"
+                  className={styles.getStartedBtn}
+                  disabled={!name.trim() || isChecking}
+                >
+                  {isChecking ? (
+                    <>
+                      <span className={styles.spinner} />
+                      Checking...
+                    </>
+                  ) : (
+                    "Get Started"
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className={styles.cardTitle}>
+                Access your
+                <br />
+                media folder
+              </h2>
+              <p className={styles.cardSubtitle}>
+                Search for your folder by name
+              </p>
+
+              {accessStep === "search" ? (
+                <form className={styles.form} onSubmit={handleSearchFolder}>
+                  <input
+                    type="text"
+                    className={styles.nameInput}
+                    value={accessName}
+                    onChange={(e) => setAccessName(e.target.value)}
+                    placeholder="Enter folder name..."
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  {accessError && (
+                    <p className={styles.accessError}>{accessError}</p>
+                  )}
+
+                  {accessFolders.length > 0 && (
+                    <div className={styles.accessFolderList}>
+                      {accessFolders.map((folder) => (
+                        <button
+                          key={folder._id}
+                          className={styles.accessFolderItem}
+                          onClick={() => handleAccessFolder(folder)}
+                          type="button"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M2 4a2 2 0 012-2h3l2 2h5a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="#111" strokeWidth="1.5" />
+                          </svg>
+                          <span>{folder.name}</span>
+                          {folder.hasPassword && (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                              <rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="#999" strokeWidth="1.2" />
+                              <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="#999" strokeWidth="1.2" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className={styles.getStartedBtn}
+                    disabled={!accessName.trim()}
+                  >
+                    Search
+                  </button>
+                </form>
+              ) : (
+                <form className={styles.form} onSubmit={handleVerifyPassword}>
+                  <div className={styles.accessingFolder}>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <rect x="3" y="8" width="12" height="8" rx="2" stroke="#111" strokeWidth="1.5" />
+                      <path d="M6 8V6a3 3 0 116 0v2" stroke="#111" strokeWidth="1.5" />
+                    </svg>
+                    <span>{selectedFolder?.name}</span>
+                  </div>
+                  <input
+                    type="password"
+                    className={styles.nameInput}
+                    value={accessPassword}
+                    onChange={(e) => setAccessPassword(e.target.value)}
+                    placeholder="Enter folder password..."
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  {accessError && (
+                    <p className={styles.accessError}>{accessError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className={styles.getStartedBtn}
+                    disabled={!accessPassword.trim()}
+                  >
+                    Unlock Folder
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.backToSearchBtn}
+                    onClick={() => {
+                      setAccessStep("search");
+                      setAccessError("");
+                      setAccessPassword("");
+                    }}
+                  >
+                    Back to search
+                  </button>
+                </form>
+              )}
+            </>
+          )}
         </div>
       </div>
 

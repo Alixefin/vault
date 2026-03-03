@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as folders from "../folders.js";
 import type * as media from "../media.js";
+import type * as sharing from "../sharing.js";
 
 import type {
   ApiFromModules,
@@ -18,8 +20,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   folders: typeof folders;
   media: typeof media;
+  sharing: typeof sharing;
 }>;
 
 /**

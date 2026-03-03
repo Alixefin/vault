@@ -58,3 +58,27 @@ export const getUrl = query({
         return await ctx.storage.getUrl(args.storageId);
     },
 });
+
+export const deleteFile = mutation({
+    args: { mediaId: v.id("media") },
+    handler: async (ctx, args) => {
+        const media = await ctx.db.get(args.mediaId);
+        if (!media) return { success: false };
+
+        // Delete from storage
+        await ctx.storage.delete(media.storageId);
+
+        // Delete share links for this media
+        const shareLinks = await ctx.db
+            .query("shareLinks")
+            .filter((q) => q.eq(q.field("mediaId"), args.mediaId))
+            .collect();
+        for (const link of shareLinks) {
+            await ctx.db.delete(link._id);
+        }
+
+        // Delete record
+        await ctx.db.delete(args.mediaId);
+        return { success: true };
+    },
+});

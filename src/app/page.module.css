@@ -82,6 +82,39 @@
   z-index: 10;
 }
 
+/* Mode Toggle */
+.modeToggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  margin-bottom: var(--space-xl);
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.modeBtn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #666666;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modeBtnActive {
+  background: #111111;
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
 .cardTitle {
   font-size: 1.75rem;
   font-weight: 800;
@@ -170,6 +203,73 @@
   animation: spin 0.6s linear infinite;
 }
 
+/* Access Mode */
+.accessError {
+  color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.accessFolderList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.accessFolderItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111111;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.accessFolderItem:hover {
+  border-color: var(--border-active);
+  background: var(--bg-tertiary);
+}
+
+.accessFolderItem span {
+  flex: 1;
+}
+
+.accessingFolder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+.backToSearchBtn {
+  background: none;
+  border: none;
+  color: #666666;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color var(--transition-fast);
+}
+
+.backToSearchBtn:hover {
+  color: #111111;
+}
+
 /* Modal */
 .modalHeader {
   text-align: center;
@@ -230,5 +330,39 @@
     max-width: 480px;
     margin: 0 auto;
     min-height: 100vh;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

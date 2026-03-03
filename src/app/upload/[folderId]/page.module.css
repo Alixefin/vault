@@ -484,6 +484,303 @@
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* Share button */
+.shareBtn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
+}
+
+.shareBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Share Modal */
+.shareModalTitle {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111111;
+    margin-bottom: var(--space-xs);
+}
+
+.shareModalDesc {
+    font-size: 0.85rem;
+    color: #666666;
+    margin-bottom: var(--space-lg);
+}
+
+.permToggle {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-full);
+    padding: 4px;
+    margin-bottom: var(--space-lg);
+}
+
+.permBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: #666666;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.permBtnActive {
+    background: #111111;
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.shareLinkBox {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.shareLinkInput {
+    flex: 1;
+    padding: 0.625rem 0.875rem;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: #111111;
+    font-family: inherit;
+    font-size: 0.75rem;
+    outline: none;
+}
+
+.copyBtn {
+    padding: 0.625rem 1rem;
+    background: #111111;
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    white-space: nowrap;
+}
+
+.copyBtn:hover {
+    background: #333333;
+}
+
+/* Existing Media Gallery */
+.existingSection {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.existingTitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #111111;
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.existingGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+}
+
+.existingCard {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+}
+
+.existingThumb {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--bg-tertiary);
+}
+
+.existingThumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.existingVideoThumb {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.existingVideoThumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.existingPlayIcon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.existingMeta {
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.existingName {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #111111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.existingSize {
+    font-size: 0.55rem;
+    color: #999999;
+}
+
+.existingDownloadBtn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.existingCard:hover .existingDownloadBtn {
+    opacity: 1;
+}
+
+.existingDeleteBtn {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 26px;
+    height: 26px;
+    background: rgba(220, 38, 38, 0.85);
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.existingCard:hover .existingDeleteBtn {
+    opacity: 1;
+}
+
+/* Folder Management Bar */
+.folderManageBar {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
+.manageBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-secondary);
+    color: #333333;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.manageBtn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-active);
+}
+
+.manageBtnDanger {
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.2);
+}
+
+.manageBtnDanger:hover {
+    background: rgba(220, 38, 38, 0.05);
+    border-color: rgba(220, 38, 38, 0.4);
+}
+
+.dangerBtn {
+    padding: 0.75rem 1.5rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.dangerBtn:hover {
+    background: #b91c1c;
+}
+
+.pwError {
+    color: #dc2626;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.pwSuccess {
+    color: #16a34a;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 @media (max-width: 480px) {
     .darkHeader {
         padding: var(--space-md) var(--space-md) var(--space-2xl);
@@ -491,5 +788,113 @@
 
     .bottomSection {
         padding: var(--space-lg) var(--space-md);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+
+    100% {
+        transform: scale(1.8);
+        opacity: 0;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes notificationSlide {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes drawLine {
+    to {
+        stroke-dashoffset: 0;
     }
 }

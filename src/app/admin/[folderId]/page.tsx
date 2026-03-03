@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -19,7 +19,18 @@ export default function FolderDetailPage() {
         folderId: folderId as Id<"folders">,
     });
 
+    const createShareLink = useMutation(api.sharing.createShareLink);
+    const deleteFileMutation = useMutation(api.media.deleteFile);
+    const deleteFolderMutation = useMutation(api.folders.deleteFolder);
+
     const [previewItem, setPreviewItem] = useState<any>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [sharePermission, setSharePermission] = useState<"view" | "save">("view");
+    const [shareLink, setShareLink] = useState("");
+    const [shareCopied, setShareCopied] = useState(false);
+    const [shareMediaId, setShareMediaId] = useState<string | null>(null);
+    const [confirmDeleteMedia, setConfirmDeleteMedia] = useState<string | null>(null);
+    const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
 
     const formatSize = (bytes: number) => {
         if (bytes < 1024) return bytes + " B";
@@ -62,6 +73,66 @@ export default function FolderDetailPage() {
         }
     };
 
+    const handleShare = async () => {
+        try {
+            const args: any = {
+                folderId: folderId as Id<"folders">,
+                permission: sharePermission,
+            };
+            if (shareMediaId) {
+                args.mediaId = shareMediaId as Id<"media">;
+            }
+            const token = await createShareLink(args);
+            const url = `${window.location.origin}/share/${token}`;
+            setShareLink(url);
+        } catch (error) {
+            console.error("Share error:", error);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareLink);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+        } catch {
+            const input = document.createElement("input");
+            input.value = shareLink;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand("copy");
+            document.body.removeChild(input);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+        }
+    };
+
+    const openShareModal = (mediaId?: string) => {
+        setShowShareModal(true);
+        setShareLink("");
+        setShareCopied(false);
+        setShareMediaId(mediaId || null);
+    };
+
+    const handleDeleteMedia = async (mediaId: string) => {
+        try {
+            await deleteFileMutation({ mediaId: mediaId as Id<"media"> });
+            setConfirmDeleteMedia(null);
+            if (previewItem?._id === mediaId) setPreviewItem(null);
+        } catch (error) {
+            console.error("Delete error:", error);
+        }
+    };
+
+    const handleDeleteFolder = async () => {
+        try {
+            await deleteFolderMutation({ folderId: folderId as Id<"folders"> });
+            router.push("/admin");
+        } catch (error) {
+            console.error("Delete folder error:", error);
+        }
+    };
+
     return (
         <div className={styles.page}>
             {/* Header */}
@@ -73,17 +144,42 @@ export default function FolderDetailPage() {
                         </svg>
                         Back
                     </button>
-                    {media && media.length > 0 && (
-                        <button id="download-all-btn" className={styles.downloadAllBtn} onClick={handleDownloadAll}>
+                    <div className={styles.headerActions}>
+                        <button className={styles.shareAllBtn} onClick={() => openShareModal()}>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="12" cy="3.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                <circle cx="4" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                <circle cx="12" cy="12.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                <path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" strokeWidth="1.2" />
                             </svg>
-                            Save All
+                            Share
                         </button>
-                    )}
+                        <button className={styles.deleteAllBtn} onClick={() => setConfirmDeleteFolder(true)}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M2.5 5h11M6 5V3.5a1 1 0 011-1h2a1 1 0 011 1V5M5 5v8a1 1 0 001 1h4a1 1 0 001-1V5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                            </svg>
+                            Delete
+                        </button>
+                        {media && media.length > 0 && (
+                            <button id="download-all-btn" className={styles.downloadAllBtn} onClick={handleDownloadAll}>
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                Save All
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className={styles.folderHeader}>
-                    <h1 className={styles.folderName}>{folder?.name || "..."}</h1>
+                    <h1 className={styles.folderName}>
+                        {folder?.name || "..."}
+                        {folder?.hasPassword && (
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: "6px" }}>
+                                <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#111" strokeWidth="1.3" />
+                                <path d="M5 7V5a3 3 0 016 0v2" stroke="#111" strokeWidth="1.3" strokeLinecap="round" />
+                            </svg>
+                        )}
+                    </h1>
                     <div className={styles.folderInfo}>
                         <span>{media?.length || 0} files</span>
                         {folder && <span>· {formatDate(folder.createdAt)}</span>}
@@ -105,9 +201,8 @@ export default function FolderDetailPage() {
                             key={item._id}
                             className={styles.mediaCard}
                             style={{ animationDelay: `${index * 0.04}s` }}
-                            onClick={() => setPreviewItem(item)}
                         >
-                            <div className={styles.mediaThumb}>
+                            <div className={styles.mediaThumb} onClick={() => setPreviewItem(item)}>
                                 {item.type === "image" && item.url ? (
                                     <img src={item.url} alt={item.fileName} loading="lazy" />
                                 ) : (
@@ -123,8 +218,31 @@ export default function FolderDetailPage() {
                                 )}
                             </div>
                             <div className={styles.mediaMeta}>
-                                <p className={styles.mediaName}>{item.fileName}</p>
-                                <p className={styles.mediaSize}>{formatSize(item.size)}</p>
+                                <div className={styles.mediaInfo}>
+                                    <p className={styles.mediaName}>{item.fileName}</p>
+                                    <p className={styles.mediaSize}>{formatSize(item.size)}</p>
+                                </div>
+                                <button
+                                    className={styles.mediaShareBtn}
+                                    onClick={() => openShareModal(item._id)}
+                                    title="Share this file"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <circle cx="9.5" cy="2.5" r="1.5" stroke="#666" strokeWidth="1" />
+                                        <circle cx="2.5" cy="6" r="1.5" stroke="#666" strokeWidth="1" />
+                                        <circle cx="9.5" cy="9.5" r="1.5" stroke="#666" strokeWidth="1" />
+                                        <path d="M3.8 5.2l4.4-1.9M3.8 6.8l4.4 1.9" stroke="#666" strokeWidth="1" />
+                                    </svg>
+                                </button>
+                                <button
+                                    className={styles.mediaDeleteBtn}
+                                    onClick={() => setConfirmDeleteMedia(item._id)}
+                                    title="Delete this file"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M3 3l6 6m0-6l-6 6" stroke="#dc2626" strokeWidth="1.3" strokeLinecap="round" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -147,6 +265,21 @@ export default function FolderDetailPage() {
                                 </p>
                             </div>
                             <div className={styles.previewActions}>
+                                <button
+                                    className={styles.previewShareBtn}
+                                    onClick={() => {
+                                        setPreviewItem(null);
+                                        openShareModal(previewItem._id);
+                                    }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                        <circle cx="12" cy="3.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                        <circle cx="4" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                        <circle cx="12" cy="12.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+                                        <path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" strokeWidth="1.2" />
+                                    </svg>
+                                    Share
+                                </button>
                                 <button
                                     className={styles.downloadBtn}
                                     onClick={() =>
@@ -183,6 +316,90 @@ export default function FolderDetailPage() {
                                     className={styles.previewVideo}
                                 />
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Share Modal */}
+            {showShareModal && (
+                <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>
+                            {shareMediaId ? "Share File" : "Share Folder"}
+                        </h2>
+                        <p className={styles.shareModalDesc}>
+                            {shareMediaId
+                                ? "Generate a share link for this file"
+                                : `Generate a share link for ${folder?.name}`}
+                        </p>
+
+                        <div className={styles.permToggle}>
+                            <button
+                                className={`${styles.permBtn} ${sharePermission === "view" ? styles.permBtnActive : ""}`}
+                                onClick={() => { setSharePermission("view"); setShareLink(""); }}
+                            >
+                                View Only
+                            </button>
+                            <button
+                                className={`${styles.permBtn} ${sharePermission === "save" ? styles.permBtnActive : ""}`}
+                                onClick={() => { setSharePermission("save"); setShareLink(""); }}
+                            >
+                                View &amp; Save
+                            </button>
+                        </div>
+
+                        {!shareLink ? (
+                            <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleShare}>
+                                Generate Link
+                            </button>
+                        ) : (
+                            <div className={styles.shareLinkBox}>
+                                <input
+                                    type="text"
+                                    value={shareLink}
+                                    readOnly
+                                    className={styles.shareLinkInput}
+                                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                                />
+                                <button className={styles.copyBtn} onClick={handleCopyLink}>
+                                    {shareCopied ? "Copied!" : "Copy"}
+                                </button>
+                            </div>
+                        )}
+
+                        <button className="btn btn-ghost" style={{ width: "100%", marginTop: "var(--space-sm)" }} onClick={() => setShowShareModal(false)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Media Confirmation */}
+            {confirmDeleteMedia && (
+                <div className="modal-overlay" onClick={() => setConfirmDeleteMedia(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>Delete File?</h2>
+                        <p className={styles.shareModalDesc}>This action cannot be undone.</p>
+                        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDeleteMedia(null)}>Cancel</button>
+                            <button className={styles.dangerBtn} style={{ flex: 1 }} onClick={() => handleDeleteMedia(confirmDeleteMedia)}>Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Folder Confirmation */}
+            {confirmDeleteFolder && (
+                <div className="modal-overlay" onClick={() => setConfirmDeleteFolder(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>Delete Folder?</h2>
+                        <p className={styles.shareModalDesc}>
+                            This will permanently delete <strong>{folder?.name}</strong> and all {media?.length || 0} files inside it.
+                        </p>
+                        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDeleteFolder(false)}>Cancel</button>
+                            <button className={styles.dangerBtn} style={{ flex: 1 }} onClick={handleDeleteFolder}>Delete Everything</button>
                         </div>
                     </div>
                 </div>

@@ -29,12 +29,32 @@ export default function UploadPage() {
     const [phase, setPhase] = useState<UploadPhase>("select");
     const [uploadProgress, setUploadProgress] = useState(0);
     const [showNotification, setShowNotification] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [sharePermission, setSharePermission] = useState<"view" | "save">("view");
+    const [shareLink, setShareLink] = useState("");
+    const [shareCopied, setShareCopied] = useState(false);
+
+    // Delete & password state
+    const [confirmDeleteMedia, setConfirmDeleteMedia] = useState<string | null>(null);
+    const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [currentPw, setCurrentPw] = useState("");
+    const [newPw, setNewPw] = useState("");
+    const [pwError, setPwError] = useState("");
+    const [pwSuccess, setPwSuccess] = useState("");
 
     const folder = useQuery(api.folders.get, {
         folderId: folderId as Id<"folders">,
     });
+    const existingMedia = useQuery(api.media.getByFolder, {
+        folderId: folderId as Id<"folders">,
+    });
     const generateUploadUrl = useMutation(api.media.generateUploadUrl);
     const saveFile = useMutation(api.media.saveFile);
+    const createShareLink = useMutation(api.sharing.createShareLink);
+    const deleteFileMutation = useMutation(api.media.deleteFile);
+    const deleteFolderMutation = useMutation(api.folders.deleteFolder);
+    const changePasswordMutation = useMutation(api.folders.changePassword);
 
     // Auto-redirect after done
     useEffect(() => {
@@ -165,6 +185,95 @@ export default function UploadPage() {
         return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     };
 
+    const handleShareFolder = async () => {
+        try {
+            const token = await createShareLink({
+                folderId: folderId as Id<"folders">,
+                permission: sharePermission,
+            });
+            const url = `${window.location.origin}/share/${token}`;
+            setShareLink(url);
+        } catch (error) {
+            console.error("Share error:", error);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareLink);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+        } catch {
+            // Fallback
+            const input = document.createElement("input");
+            input.value = shareLink;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand("copy");
+            document.body.removeChild(input);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+        }
+    };
+
+    const handleDownloadExisting = async (url: string, fileName: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            console.error("Download error:", error);
+        }
+    };
+
+    const handleDeleteMedia = async (mediaId: string) => {
+        try {
+            await deleteFileMutation({ mediaId: mediaId as Id<"media"> });
+            setConfirmDeleteMedia(null);
+        } catch (error) {
+            console.error("Delete error:", error);
+        }
+    };
+
+    const handleDeleteFolder = async () => {
+        try {
+            await deleteFolderMutation({ folderId: folderId as Id<"folders"> });
+            router.push("/");
+        } catch (error) {
+            console.error("Delete folder error:", error);
+        }
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPwError("");
+        setPwSuccess("");
+        try {
+            const result = await changePasswordMutation({
+                folderId: folderId as Id<"folders">,
+                currentPassword: currentPw || undefined,
+                newPassword: newPw || undefined,
+            });
+            if (result.success) {
+                setPwSuccess(newPw ? "Password updated!" : "Password removed!");
+                setCurrentPw("");
+                setNewPw("");
+                setTimeout(() => { setShowPasswordModal(false); setPwSuccess(""); }, 1500);
+            } else {
+                setPwError(result.error || "Failed to change password");
+            }
+        } catch {
+            setPwError("Something went wrong");
+        }
+    };
+
     // === Processing / Done Screens ===
     if (phase === "notification" || phase === "processing" || phase === "done") {
         return (
@@ -284,7 +393,14 @@ export default function UploadPage() {
                         </svg>
                     </button>
                     <span className={styles.headerTitle}>Tap, Upload, Share</span>
-                    <div style={{ width: 36 }} />
+                    <button className={styles.shareBtn} onClick={() => { setShowShareModal(true); setShareLink(""); setShareCopied(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <circle cx="14" cy="4" r="2.5" stroke="white" strokeWidth="1.2" />
+                            <circle cx="4" cy="9" r="2.5" stroke="white" strokeWidth="1.2" />
+                            <circle cx="14" cy="14" r="2.5" stroke="white" strokeWidth="1.2" />
+                            <path d="M6.3 7.8l5.4-2.6M6.3 10.2l5.4 2.6" stroke="white" strokeWidth="1.2" />
+                        </svg>
+                    </button>
                 </div>
                 <p className={styles.headerSub}>Your Gateway to Easy Sharing</p>
 
@@ -455,7 +571,204 @@ export default function UploadPage() {
                     </svg>
                     Saving to: <strong>{folder?.name || "..."}</strong>
                 </div>
+
+                {/* Folder Management Bar */}
+                <div className={styles.folderManageBar}>
+                    <button className={styles.manageBtn} onClick={() => { setShowPasswordModal(true); setPwError(""); setPwSuccess(""); setCurrentPw(""); setNewPw(""); }}>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <rect x="3" y="7" width="8" height="5.5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                            <path d="M5 7V5a2 2 0 014 0v2" stroke="currentColor" strokeWidth="1.2" />
+                        </svg>
+                        {folder?.hasPassword ? "Change Password" : "Set Password"}
+                    </button>
+                    <button className={`${styles.manageBtn} ${styles.manageBtnDanger}`} onClick={() => setConfirmDeleteFolder(true)}>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M2 4h10M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M4 4v7.5a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                        </svg>
+                        Delete Folder
+                    </button>
+                </div>
+
+                {/* Existing Media Gallery */}
+                {existingMedia && existingMedia.length > 0 && (
+                    <div className={styles.existingSection}>
+                        <h3 className={styles.existingTitle}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M2 4a2 2 0 012-2h3l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="#111" strokeWidth="1.3" />
+                            </svg>
+                            Files in this folder ({existingMedia.length})
+                        </h3>
+                        <div className={styles.existingGrid}>
+                            {existingMedia.map((item: any) => (
+                                <div key={item._id} className={styles.existingCard}>
+                                    <div className={styles.existingThumb}>
+                                        {item.type === "image" && item.url ? (
+                                            <img src={item.url} alt={item.fileName} loading="lazy" />
+                                        ) : (
+                                            <div className={styles.existingVideoThumb}>
+                                                {item.url && <video src={item.url} preload="metadata" />}
+                                                <div className={styles.existingPlayIcon}>
+                                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                                        <circle cx="10" cy="10" r="8" fill="rgba(0,0,0,0.5)" />
+                                                        <polygon points="8,6 8,14 14,10" fill="white" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className={styles.existingMeta}>
+                                        <span className={styles.existingName}>{item.fileName}</span>
+                                        <span className={styles.existingSize}>{formatSize(item.size)}</span>
+                                    </div>
+                                    {item.url && (
+                                        <button
+                                            className={styles.existingDownloadBtn}
+                                            onClick={() => handleDownloadExisting(item.url, item.fileName)}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                <path d="M7 2v7m0 0L4.5 6.5M7 9l2.5-2.5M2 11v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    <button
+                                        className={styles.existingDeleteBtn}
+                                        onClick={() => setConfirmDeleteMedia(item._id)}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                            <path d="M4 4l6 6m0-6l-6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Share Modal */}
+            {showShareModal && (
+                <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>Share Folder</h2>
+                        <p className={styles.shareModalDesc}>
+                            Generate a share link for <strong>{folder?.name}</strong>
+                        </p>
+
+                        <div className={styles.permToggle}>
+                            <button
+                                className={`${styles.permBtn} ${sharePermission === "view" ? styles.permBtnActive : ""}`}
+                                onClick={() => { setSharePermission("view"); setShareLink(""); }}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
+                                    <circle cx="7" cy="7" r="2" fill="currentColor" />
+                                </svg>
+                                View Only
+                            </button>
+                            <button
+                                className={`${styles.permBtn} ${sharePermission === "save" ? styles.permBtnActive : ""}`}
+                                onClick={() => { setSharePermission("save"); setShareLink(""); }}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <path d="M7 1v8m0 0L4 6m3 3l3-3M1 11v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                View &amp; Save
+                            </button>
+                        </div>
+
+                        {!shareLink ? (
+                            <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleShareFolder}>
+                                Generate Link
+                            </button>
+                        ) : (
+                            <div className={styles.shareLinkBox}>
+                                <input
+                                    type="text"
+                                    value={shareLink}
+                                    readOnly
+                                    className={styles.shareLinkInput}
+                                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                                />
+                                <button className={styles.copyBtn} onClick={handleCopyLink}>
+                                    {shareCopied ? "Copied!" : "Copy"}
+                                </button>
+                            </div>
+                        )}
+
+                        <button className="btn btn-ghost" style={{ width: "100%", marginTop: "var(--space-sm)" }} onClick={() => setShowShareModal(false)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Media Confirmation */}
+            {confirmDeleteMedia && (
+                <div className="modal-overlay" onClick={() => setConfirmDeleteMedia(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>Delete File?</h2>
+                        <p className={styles.shareModalDesc}>This action cannot be undone. The file will be permanently deleted.</p>
+                        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDeleteMedia(null)}>Cancel</button>
+                            <button className={styles.dangerBtn} style={{ flex: 1 }} onClick={() => handleDeleteMedia(confirmDeleteMedia)}>Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Folder Confirmation */}
+            {confirmDeleteFolder && (
+                <div className="modal-overlay" onClick={() => setConfirmDeleteFolder(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>Delete Folder?</h2>
+                        <p className={styles.shareModalDesc}>
+                            This will permanently delete <strong>{folder?.name}</strong> and all {existingMedia?.length || 0} files inside it.
+                        </p>
+                        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDeleteFolder(false)}>Cancel</button>
+                            <button className={styles.dangerBtn} style={{ flex: 1 }} onClick={handleDeleteFolder}>Delete Everything</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Password Modal */}
+            {showPasswordModal && (
+                <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className={styles.shareModalTitle}>{folder?.hasPassword ? "Change Password" : "Set Password"}</h2>
+                        <p className={styles.shareModalDesc}>
+                            {folder?.hasPassword ? "Enter your current password and a new password" : "Set a password to protect this folder"}
+                        </p>
+                        <form onSubmit={handleChangePassword} style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+                            {folder?.hasPassword && (
+                                <input
+                                    type="password"
+                                    className={styles.shareLinkInput}
+                                    placeholder="Current password"
+                                    value={currentPw}
+                                    onChange={(e) => setCurrentPw(e.target.value)}
+                                    autoComplete="off"
+                                />
+                            )}
+                            <input
+                                type="password"
+                                className={styles.shareLinkInput}
+                                placeholder={folder?.hasPassword ? "New password (leave empty to remove)" : "New password"}
+                                value={newPw}
+                                onChange={(e) => setNewPw(e.target.value)}
+                                autoComplete="off"
+                            />
+                            {pwError && <p className={styles.pwError}>{pwError}</p>}
+                            {pwSuccess && <p className={styles.pwSuccess}>{pwSuccess}</p>}
+                            <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowPasswordModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
