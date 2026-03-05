@@ -554,3 +554,73 @@
 .dangerBtn:hover {
     background: #b91c1c;
 }
+
+/* Share Options */
+.shareOptions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.toggleLabel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #111111;
+    cursor: default;
+}
+
+.toggleDesc {
+    flex: 1;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #888888;
+    min-width: 100px;
+}
+
+.toggle {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    background: #ddd;
+    border: none;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.toggleActive {
+    background: #111111;
+}
+
+.toggleKnob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggleActive .toggleKnob {
+    transform: translateX(16px);
+}
+
+.sharePasswordWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}

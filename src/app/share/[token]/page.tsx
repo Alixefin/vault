@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { useParams } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import styles from "./page.module.css";
@@ -11,8 +11,36 @@ export default function SharePage() {
     const token = params.token as string;
 
     const shareData = useQuery(api.sharing.getShareData, { token });
+    const verifySharePassword = useMutation(api.sharing.verifySharePassword);
+    const markShareViewed = useMutation(api.sharing.markShareViewed);
 
-    const isViewOnly = shareData?.permission === "view";
+    const [password, setPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [unlockedData, setUnlockedData] = useState<any>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [hasMarkedViewed, setHasMarkedViewed] = useState(false);
+    const [isBlurred, setIsBlurred] = useState(false);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // Determine what data to display
+    const displayData = unlockedData || shareData;
+    const isViewOnly = displayData?.permission === "view";
+    const isExpired = shareData?.isExpired;
+    const requiresPassword = shareData?.requiresPassword && !unlockedData;
+
+    // Mark view-once as viewed for non-password-protected links
+    useEffect(() => {
+        if (
+            shareData &&
+            !shareData.isExpired &&
+            !shareData.requiresPassword &&
+            shareData.viewOnce &&
+            !hasMarkedViewed
+        ) {
+            markShareViewed({ token });
+            setHasMarkedViewed(true);
+        }
+    }, [shareData, token, hasMarkedViewed, markShareViewed]);
 
     // Screenshot/right-click prevention for view-only
     useEffect(() => {
@@ -20,25 +48,66 @@ export default function SharePage() {
 
         const preventContext = (e: MouseEvent) => e.preventDefault();
         const preventKeys = (e: KeyboardEvent) => {
-            // Prevent PrintScreen, Ctrl+P, Ctrl+S, Ctrl+Shift+S
             if (
                 e.key === "PrintScreen" ||
                 (e.ctrlKey && e.key === "p") ||
                 (e.ctrlKey && e.key === "s") ||
-                (e.ctrlKey && e.shiftKey && e.key === "s")
+                (e.ctrlKey && e.shiftKey && e.key === "s") ||
+                (e.ctrlKey && e.shiftKey && e.key === "i")
             ) {
                 e.preventDefault();
             }
         };
 
+        // Blur content when tab loses focus (deters screenshot tools)
+        const handleVisibility = () => {
+            if (document.hidden) {
+                setIsBlurred(true);
+            } else {
+                // Slight delay before unblurring
+                setTimeout(() => setIsBlurred(false), 300);
+            }
+        };
+
+        const handleBlur = () => setIsBlurred(true);
+        const handleFocus = () => setTimeout(() => setIsBlurred(false), 300);
+
         document.addEventListener("contextmenu", preventContext);
         document.addEventListener("keydown", preventKeys);
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("blur", handleBlur);
+        window.addEventListener("focus", handleFocus);
 
         return () => {
             document.removeEventListener("contextmenu", preventContext);
             document.removeEventListener("keydown", preventKeys);
+            document.removeEventListener("visibilitychange", handleVisibility);
+            window.removeEventListener("blur", handleBlur);
+            window.removeEventListener("focus", handleFocus);
         };
     }, [isViewOnly]);
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!password.trim()) return;
+        setPasswordError("");
+        setIsVerifying(true);
+
+        try {
+            const result = await verifySharePassword({
+                token,
+                password: password.trim(),
+            });
+            if (result.success && result.data) {
+                setUnlockedData(result.data);
+            } else {
+                setPasswordError(result.error || "Incorrect password");
+            }
+        } catch {
+            setPasswordError("Something went wrong");
+        }
+        setIsVerifying(false);
+    };
 
     const handleDownload = async (url: string, fileName: string) => {
         try {
@@ -63,6 +132,7 @@ export default function SharePage() {
         return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     };
 
+    // Loading state
     if (shareData === undefined) {
         return (
             <div className={styles.page}>
@@ -74,6 +144,7 @@ export default function SharePage() {
         );
     }
 
+    // Not found
     if (shareData === null) {
         return (
             <div className={styles.page}>
@@ -89,8 +160,86 @@ export default function SharePage() {
         );
     }
 
+    // Expired (view-once already viewed)
+    if (isExpired) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.notFound}>
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <circle cx="24" cy="24" r="20" stroke="#ccc" strokeWidth="2" />
+                        <path d="M24 14v12" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round" />
+                        <circle cx="24" cy="32" r="1.5" fill="#ccc" />
+                    </svg>
+                    <h2>Link Expired</h2>
+                    <p>This was a view-once link and has already been viewed.</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Password gate
+    if (requiresPassword) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.passwordGate}>
+                    <div className={styles.passwordIcon}>
+                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                            <rect x="6" y="18" width="28" height="18" rx="4" stroke="#111" strokeWidth="2.5" />
+                            <path d="M12 18V14a8 8 0 1116 0v4" stroke="#111" strokeWidth="2.5" strokeLinecap="round" />
+                            <circle cx="20" cy="28" r="2.5" fill="#111" />
+                        </svg>
+                    </div>
+                    <h2>Password Protected</h2>
+                    <p>This shared content requires a password to view.</p>
+                    {shareData.viewOnce && (
+                        <div className={styles.viewOnceBadge}>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" />
+                                <path d="M6 3v4l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                            </svg>
+                            View Once — link expires after viewing
+                        </div>
+                    )}
+                    <form onSubmit={handlePasswordSubmit} className={styles.passwordForm}>
+                        <input
+                            type="password"
+                            className={styles.passwordInput}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter password..."
+                            autoComplete="off"
+                            autoFocus
+                        />
+                        {passwordError && (
+                            <p className={styles.passwordError}>{passwordError}</p>
+                        )}
+                        <button
+                            type="submit"
+                            className={styles.passwordSubmitBtn}
+                            disabled={!password.trim() || isVerifying}
+                        >
+                            {isVerifying ? "Verifying..." : "Unlock"}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    // If we still don't have media data, show loading
+    if (!displayData?.media) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.loading}>
+                    <div className={styles.spinner} />
+                    <p>Loading shared content...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`${styles.page} ${isViewOnly ? styles.viewOnly : ""}`}>
+        <div className={`${styles.page} ${isViewOnly ? styles.viewOnly : ""} ${isBlurred ? styles.blurred : ""}`} ref={contentRef}>
             {/* View-only overlay for screenshot prevention */}
             {isViewOnly && <div className={styles.screenshotGuard} />}
 
@@ -115,16 +264,19 @@ export default function SharePage() {
                             </>
                         )}
                     </div>
-                    <h1 className={styles.folderName}>{shareData.folder.name}</h1>
+                    <h1 className={styles.folderName}>{displayData.folder.name}</h1>
                     <p className={styles.mediaCount}>
-                        {shareData.media.length} file{shareData.media.length !== 1 ? "s" : ""}
+                        {displayData.media.length} file{displayData.media.length !== 1 ? "s" : ""}
+                        {displayData.viewOnce && (
+                            <span className={styles.viewOnceTag}> · View Once</span>
+                        )}
                     </p>
                 </div>
             </header>
 
             {/* Media Grid */}
             <div className={styles.mediaGrid}>
-                {shareData.media.map((item: any, index: number) => (
+                {displayData.media.map((item: any, index: number) => (
                     <div
                         key={item._id}
                         className={styles.mediaCard}

@@ -14,6 +14,11 @@ export default function HomePage() {
   const [existingFolders, setExistingFolders] = useState<any[]>([]);
   const [mode, setMode] = useState<"create" | "access">("create");
 
+  // Conflict password state
+  const [conflictFolder, setConflictFolder] = useState<any>(null);
+  const [conflictPassword, setConflictPassword] = useState("");
+  const [conflictError, setConflictError] = useState("");
+
   // Access mode state
   const [accessName, setAccessName] = useState("");
   const [accessPassword, setAccessPassword] = useState("");
@@ -59,8 +64,34 @@ export default function HomePage() {
     }
   };
 
-  const handleUseExisting = (folderId: string) => {
-    router.push(`/upload/${folderId}`);
+  const handleUseExisting = (folder: any) => {
+    if (folder.password) {
+      // Folder is password-protected — prompt for password
+      setConflictFolder(folder);
+      setConflictPassword("");
+      setConflictError("");
+    } else {
+      router.push(`/upload/${folder._id}`);
+    }
+  };
+
+  const handleConflictVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!conflictFolder || !conflictPassword.trim()) return;
+    setConflictError("");
+    try {
+      const valid = await verifyFolderPassword({
+        folderId: conflictFolder._id,
+        password: conflictPassword.trim(),
+      });
+      if (valid) {
+        router.push(`/upload/${conflictFolder._id}`);
+      } else {
+        setConflictError("Incorrect password");
+      }
+    } catch {
+      setConflictError("Something went wrong");
+    }
   };
 
   const handleCreateNew = async () => {
@@ -328,7 +359,7 @@ export default function HomePage() {
       {/* Conflict Modal */}
       {showConflict && (
         <div className="modal-overlay" onClick={() => setShowConflict(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: conflictFolder ? "380px" : undefined }}>
             <div className={styles.modalHeader}>
               <div className={styles.modalIcon}>
                 <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -345,23 +376,70 @@ export default function HomePage() {
             </div>
 
             <div className={styles.modalActions}>
-              {existingFolders.map((folder) => (
-                <button
-                  key={folder._id}
-                  id={`use-existing-${folder._id}`}
-                  className={`btn btn-secondary ${styles.modalBtn}`}
-                  onClick={() => handleUseExisting(folder._id)}
-                >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path
-                      d="M2 4a2 2 0 012-2h3.5l2 2H14a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                  Use Existing Folder
-                </button>
-              ))}
+              {conflictFolder ? (
+                <form onSubmit={handleConflictVerify} style={{ width: "100%" }}>
+                  <div className={styles.accessingFolder}>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <rect x="3" y="8" width="12" height="8" rx="2" stroke="#111" strokeWidth="1.5" />
+                      <path d="M6 8V6a3 3 0 116 0v2" stroke="#111" strokeWidth="1.5" />
+                    </svg>
+                    <span>{conflictFolder.name}</span>
+                  </div>
+                  <input
+                    type="password"
+                    className={styles.nameInput}
+                    value={conflictPassword}
+                    onChange={(e) => setConflictPassword(e.target.value)}
+                    placeholder="Enter folder password..."
+                    autoComplete="off"
+                    autoFocus
+                    style={{ marginBottom: "var(--space-sm)" }}
+                  />
+                  {conflictError && (
+                    <p className={styles.accessError}>{conflictError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className={`btn btn-primary ${styles.modalBtn}`}
+                    disabled={!conflictPassword.trim()}
+                    style={{ width: "100%" }}
+                  >
+                    Unlock & Upload
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-ghost ${styles.modalBtn}`}
+                    onClick={() => setConflictFolder(null)}
+                    style={{ width: "100%", marginTop: "var(--space-xs)" }}
+                  >
+                    Back
+                  </button>
+                </form>
+              ) : (
+                existingFolders.map((folder) => (
+                  <button
+                    key={folder._id}
+                    id={`use-existing-${folder._id}`}
+                    className={`btn btn-secondary ${styles.modalBtn}`}
+                    onClick={() => handleUseExisting(folder)}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <path
+                        d="M2 4a2 2 0 012-2h3.5l2 2H14a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                    Use Existing Folder
+                    {!!folder.password && (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginLeft: "4px" }}>
+                        <rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                        <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" strokeWidth="1.2" />
+                      </svg>
+                    )}
+                  </button>
+                ))
+              )}
 
               <button
                 id="create-new-btn"

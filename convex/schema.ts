@@ -27,6 +27,9 @@ export default defineSchema({
     mediaId: v.optional(v.id("media")),
     token: v.string(),
     permission: v.union(v.literal("view"), v.literal("save")),
+    viewOnce: v.optional(v.boolean()),
+    viewed: v.optional(v.boolean()),
+    password: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_token", ["token"])

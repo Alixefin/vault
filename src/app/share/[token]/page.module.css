@@ -4,6 +4,7 @@
     padding: var(--space-xl);
     min-height: 100vh;
     animation: fadeIn 0.4s ease;
+    transition: filter 0.3s ease;
 }
 
 /* View-only mode */
@@ -20,6 +21,12 @@
     pointer-events: none;
 }
 
+/* Blur effect for screenshot prevention */
+.blurred {
+    filter: blur(30px) !important;
+    transition: filter 0.1s ease !important;
+}
+
 .screenshotGuard {
     position: fixed;
     top: 0;
@@ -28,8 +35,27 @@
     height: 100%;
     pointer-events: none;
     z-index: 9999;
-    /* Transparent overlay that breaks basic screenshotting tools */
-    mix-blend-mode: difference;
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 200px,
+            rgba(200, 200, 200, 0.03) 200px,
+            rgba(200, 200, 200, 0.03) 201px);
+}
+
+/* Hide everything when printing */
+@media print {
+    .page {
+        display: none !important;
+    }
+
+    body::after {
+        content: "Printing is not allowed for this content.";
+        display: block;
+        padding: 2rem;
+        font-size: 1.2rem;
+        text-align: center;
+        color: #666;
+    }
 }
 
 /* Loading */
@@ -52,7 +78,7 @@
     animation: spin 0.8s linear infinite;
 }
 
-/* Not Found */
+/* Not Found / Expired */
 .notFound {
     display: flex;
     flex-direction: column;
@@ -72,6 +98,113 @@
 .notFound p {
     color: #666666;
     font-size: 0.9rem;
+}
+
+/* Password Gate */
+.passwordGate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: var(--space-sm);
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.passwordIcon {
+    margin-bottom: var(--space-sm);
+    animation: scaleIn 0.4s ease;
+}
+
+.passwordGate h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111111;
+}
+
+.passwordGate p {
+    color: #666666;
+    font-size: 0.875rem;
+    margin-bottom: var(--space-sm);
+}
+
+.viewOnceBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #e67e22;
+    background: rgba(230, 126, 34, 0.08);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(230, 126, 34, 0.15);
+    margin-bottom: var(--space-sm);
+}
+
+.passwordForm {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.passwordInput {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: #111111;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    text-align: center;
+    transition: border-color var(--transition-fast);
+}
+
+.passwordInput:focus {
+    border-color: #111111;
+}
+
+.passwordError {
+    color: #dc2626;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin: -2px 0;
+}
+
+.passwordSubmitBtn {
+    padding: 0.75rem 1.5rem;
+    background: #111111;
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.passwordSubmitBtn:hover:not(:disabled) {
+    background: #333333;
+    transform: translateY(-1px);
+}
+
+.passwordSubmitBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* View Once Tag */
+.viewOnceTag {
+    color: #e67e22;
+    font-weight: 600;
 }
 
 /* Header */
@@ -265,5 +398,17 @@
 
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
     }
 }

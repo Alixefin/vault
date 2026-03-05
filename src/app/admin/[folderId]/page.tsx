@@ -29,6 +29,8 @@ export default function FolderDetailPage() {
     const [shareLink, setShareLink] = useState("");
     const [shareCopied, setShareCopied] = useState(false);
     const [shareMediaId, setShareMediaId] = useState<string | null>(null);
+    const [shareViewOnce, setShareViewOnce] = useState(false);
+    const [sharePassword, setSharePassword] = useState("");
     const [confirmDeleteMedia, setConfirmDeleteMedia] = useState<string | null>(null);
     const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
 
@@ -81,6 +83,8 @@ export default function FolderDetailPage() {
             };
             if (shareMediaId) {
                 args.mediaId = shareMediaId as Id<"media">;
+                if (shareViewOnce) args.viewOnce = true;
+                if (sharePassword.trim()) args.password = sharePassword.trim();
             }
             const token = await createShareLink(args);
             const url = `${window.location.origin}/share/${token}`;
@@ -112,6 +116,8 @@ export default function FolderDetailPage() {
         setShareLink("");
         setShareCopied(false);
         setShareMediaId(mediaId || null);
+        setShareViewOnce(false);
+        setSharePassword("");
     };
 
     const handleDeleteMedia = async (mediaId: string) => {
@@ -348,6 +354,37 @@ export default function FolderDetailPage() {
                                 View &amp; Save
                             </button>
                         </div>
+
+                        {/* View-once and password options for single file shares */}
+                        {shareMediaId && !shareLink && (
+                            <div className={styles.shareOptions}>
+                                <label className={styles.toggleLabel}>
+                                    <span>View Once</span>
+                                    <span className={styles.toggleDesc}>Link expires after first view</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.toggle} ${shareViewOnce ? styles.toggleActive : ""}`}
+                                        onClick={() => setShareViewOnce(!shareViewOnce)}
+                                    >
+                                        <span className={styles.toggleKnob} />
+                                    </button>
+                                </label>
+                                <div className={styles.sharePasswordWrap}>
+                                    <label className={styles.toggleLabel}>
+                                        <span>One-Time Password</span>
+                                        <span className={styles.toggleDesc}>Require a password to view</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className={styles.shareLinkInput}
+                                        placeholder="Set password (optional)"
+                                        value={sharePassword}
+                                        onChange={(e) => setSharePassword(e.target.value)}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {!shareLink ? (
                             <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleShare}>
